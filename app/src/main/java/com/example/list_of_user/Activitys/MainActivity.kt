@@ -1,7 +1,6 @@
 package com.example.list_of_user.Activitys
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,29 +25,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
+import com.example.list_of_user.Adapter.User
 import com.example.list_of_user.R
-import com.example.list_of_user.ui.theme.List_of_userTheme
-import java.text.SimpleDateFormat
-import java.util.*
 
-data class Item(
-    val name: String,
-    val birthDate: String,
-    val cpf: String,
-    val city: String,
-    val isActive: Boolean,
-    val photoUri: Uri? = null
-) {
-    val age: Int
-        get() {
-            val format = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            val date = format.parse(birthDate)
-            val calendar = Calendar.getInstance()
-            calendar.time = date
-            val year = calendar.get(Calendar.YEAR)
-            return Calendar.getInstance().get(Calendar.YEAR) - year
-        }
-}
+import com.example.list_of_user.ui.theme.List_of_userTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,21 +36,21 @@ class MainActivity : ComponentActivity() {
         setContent {
             List_of_userTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    val items = remember {
+                    val users = remember {
                         mutableStateListOf(
-                            Item("Alice", "01/01/1990", "123.456.789-00", "City A", true),
-                            Item("Bob", "02/02/1985", "987.654.321-00", "City B", false)
+                            User(1, "Alice", "01/01/1990", "123.456.789-00", "City A", true),
+                            User(2, "Bob", "02/02/1985", "987.654.321-00", "City B", false)
                         )
                     }
 
                     MainScreen(
-                        items = items,
+                        items = users,
                         modifier = Modifier.padding(innerPadding),
-                        onEdit = { item ->
+                        onEdit = { user ->
                             // Handle edit action
                         },
-                        onDelete = { item ->
-                            items.remove(item)
+                        onDelete = { user ->
+                            users.remove(user)
                         },
                         onAdd = {
                             val intent = Intent(this, RegistrationActivity::class.java)
@@ -86,10 +66,10 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    items: List<Item>,
+    items: List<User>,
     modifier: Modifier = Modifier,
-    onEdit: (Item) -> Unit,
-    onDelete: (Item) -> Unit,
+    onEdit: (User) -> Unit,
+    onDelete: (User) -> Unit,
     onAdd: () -> Unit
 ) {
     Scaffold(
@@ -112,8 +92,8 @@ fun MainScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            items(items) { item ->
-                SwipeableItem(item, onEdit, onDelete)
+            items(items) { user ->
+                SwipeableUser(user, onEdit, onDelete)
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
@@ -121,10 +101,10 @@ fun MainScreen(
 }
 
 @Composable
-fun SwipeableItem(
-    item: Item,
-    onEdit: (Item) -> Unit,
-    onDelete: (Item) -> Unit
+fun SwipeableUser(
+    user: User,
+    onEdit: (User) -> Unit,
+    onDelete: (User) -> Unit
 ) {
     var offset by remember { mutableStateOf(Offset.Zero) }
 
@@ -151,10 +131,10 @@ fun SwipeableItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            item.photoUri?.let {
+            user.photoUri?.let {
                 Image(
                     painter = rememberAsyncImagePainter(it),
-                    contentDescription = "Foto de ${item.name}",
+                    contentDescription = "Foto de ${user.name}",
                     modifier = Modifier
                         .size(80.dp)
                         .clip(CircleShape)
@@ -176,8 +156,8 @@ fun SwipeableItem(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column {
-                Text("Nome: ${item.name}")
-                Text("Idade: ${item.age} anos")
+                Text("Nome: ${user.name}")
+                Text("Idade: ${user.age} anos")
             }
         }
 
@@ -188,7 +168,7 @@ fun SwipeableItem(
                     .padding(end = 16.dp)
                     .background(Color.Green)
                     .clickable {
-                        onEdit(item)
+                        onEdit(user)
                         offset = Offset.Zero
                     }
             ) {
@@ -208,7 +188,7 @@ fun SwipeableItem(
                     .padding(start = 16.dp)
                     .background(Color.Red)
                     .clickable {
-                        onDelete(item)
+                        onDelete(user)
                         offset = Offset.Zero
                     }
             ) {

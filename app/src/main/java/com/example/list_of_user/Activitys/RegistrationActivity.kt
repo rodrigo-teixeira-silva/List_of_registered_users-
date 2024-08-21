@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import com.example.list_of_user.Database.UserDatabaseHelper
+
 import com.example.list_of_user.ui.ItemForm
 import com.example.list_of_user.ui.theme.List_of_userTheme
 
@@ -47,17 +49,29 @@ class RegistrationActivity : ComponentActivity() {
                     ) {
                         val intent = Intent(
                             Intent.ACTION_PICK,
-                            MediaStore.Images.Media
-                                .EXTERNAL_CONTENT_URI
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
                         )
                         launcher.launch(intent)
-
                     }
 
+                    val databaseHelper = remember { UserDatabaseHelper(this) }
 
                     // Implementar o comportamento dos botões e foto
                     val onCreateClick: () -> Unit = {
-                        // Implement your create logic here
+
+                        val user = com.example.list_of_user.Adapter.User(
+                            name = name,
+                            birthDate = birthDate,
+                            cpf = cpf,
+                            city = city,
+                            isActive = isActive,
+                            photoUri = photoUri?.toString()
+
+
+                        )
+                        databaseHelper.insertUser(user)
+                        finish()
+
                     }
 
                     val onPhotoChange: (Uri?) -> Unit = { uri ->
