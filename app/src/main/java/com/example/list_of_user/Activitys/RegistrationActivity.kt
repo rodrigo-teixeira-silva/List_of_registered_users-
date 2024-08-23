@@ -66,12 +66,10 @@ class RegistrationActivity : ComponentActivity() {
                             city = city,
                             isActive = isActive,
                             photoUri = photoUri?.toString()
-
-
                         )
                         databaseHelper.insertUser(user)
+                        setResult(RESULT_OK)
                         finish()
-
                     }
 
                     val onPhotoChange: (Uri?) -> Unit = { uri ->

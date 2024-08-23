@@ -1,12 +1,17 @@
 package com.example.list_of_user.Activitys
 
+import android.app.Instrumentation
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,32 +31,57 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.example.list_of_user.Adapter.User
+import com.example.list_of_user.Database.UserDaoImpl
 import com.example.list_of_user.R
+import java.time.LocalDate
+import java.time.Period
+import java.time.format.DateTimeFormatter
+
 
 import com.example.list_of_user.ui.theme.List_of_userTheme
+import com.example.list_of_user.utils.calculateAge
+import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
+    private lateinit var userDao: UserDaoImpl
+
+
+    private val registrationResultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == RESULT_OK) {
+                // Atualizar a lista após a criação do usuário
+                var users = loadUsersFromDatabase()
+            }
+        }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        userDao = UserDaoImpl(this)
+
         setContent {
             List_of_userTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    val users = remember {
-                        mutableStateListOf(
-                            User(1, "Alice", "01/01/1990", "123.456.789-00", "City A", true),
-                            User(2, "Bob", "02/02/1985", "987.654.321-00", "City B", false)
-                        )
-                    }
+                    var users by remember { mutableStateOf(loadUsersFromDatabase()) }
 
                     MainScreen(
                         items = users,
                         modifier = Modifier.padding(innerPadding),
                         onEdit = { user ->
-                            // Handle edit action
+                            val intent = Intent(this, EditActivity::class.java).apply {
+                                putExtra(
+                                    "USER_ID",
+                                    user.id
+                                ) // Passe o ID do usuário para a EditActivity
+                            }
+                            startActivity(intent)
                         },
                         onDelete = { user ->
-                            users.remove(user)
+                            userDao.deleteUser(user.id)
+                            // Atualizar a lista após a exclusão
+                            users = loadUsersFromDatabase()
                         },
+
                         onAdd = {
                             val intent = Intent(this, RegistrationActivity::class.java)
                             startActivity(intent)
@@ -60,6 +90,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun loadUsersFromDatabase(): List<User> {
+        return userDao.getActiveUsers()
     }
 }
 
@@ -106,31 +140,20 @@ fun SwipeableUser(
     onEdit: (User) -> Unit,
     onDelete: (User) -> Unit
 ) {
-    var offset by remember { mutableStateOf(Offset.Zero) }
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp) // Ajuste a altura conforme necessário
-            .background(Color.White)
-            .offset { IntOffset(offset.x.toInt(), 0) }
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, _, _ ->
-                    offset = Offset(
-                        x = (offset.x + pan.x).coerceIn(-150f, 150f),
-                        y = 0f
-                    )
-                }
-            }
+            .height(120.dp)
+            .background(Color.LightGray)
+            .padding(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp)
-                .background(Color.LightGray)
-                .padding(16.dp),
+                .align(Alignment.CenterStart),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Imagem do usuário
             user.photoUri?.let {
                 Image(
                     painter = rememberAsyncImagePainter(it),
@@ -157,48 +180,45 @@ fun SwipeableUser(
 
             Column {
                 Text("Nome: ${user.name}")
-                Text("Idade: ${user.age} anos")
+                val age = calculateAge(user.birthDate)
+                println("User Birth Date: ${user.birthDate}, Age: $age") // Adicionado para depuração
+                Text("Idade: $age anos") // Calcula e exibe a idade
             }
         }
 
-        if (offset.x > 100) {
-            Box(
+        // Botões de ação no canto direito
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .width(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ActionButton(
+                iconResId = R.drawable.ic_edit,
+                onClick = { onEdit(user) },
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 16.dp)
-                    .background(Color.Green)
-                    .clickable {
-                        onEdit(user)
-                        offset = Offset.Zero
-                    }
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_edit),
-                    contentDescription = "Editar",
-                    tint = Color.White,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+                    .size(30.dp)
+            )
+            ActionButton(
+                iconResId = R.drawable.ic_delete,
+                onClick = { onDelete(user) },
+                modifier = Modifier.size(30.dp)
+            )
         }
+    }
+}
 
-        if (offset.x < -100) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 16.dp)
-                    .background(Color.Red)
-                    .clickable {
-                        onDelete(user)
-                        offset = Offset.Zero
-                    }
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_delete),
-                    contentDescription = "Excluir",
-                    tint = Color.White,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
-        }
+@Composable
+fun ActionButton(
+    iconResId: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(onClick = onClick, modifier = modifier) {
+        Icon(
+            painter = painterResource(id = iconResId),
+            contentDescription = null
+        )
     }
 }

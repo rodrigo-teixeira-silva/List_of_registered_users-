@@ -12,15 +12,20 @@ data class User(
     val isActive: Boolean,
     val photoUri: String? = null
 
-
 ) {
     val age: Int
         get() {
-            val format = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            val date = format.parse(birthDate)
-            val calendar = Calendar.getInstance()
-            calendar.time = date
-            val year = calendar.get(Calendar.YEAR)
-            return Calendar.getInstance().get(Calendar.YEAR) - year
+            return try {
+                val format = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                val date = format.parse(birthDate)
+                val calendar = Calendar.getInstance()
+                calendar.time = date
+                val year = calendar.get(Calendar.YEAR)
+                Calendar.getInstance().get(Calendar.YEAR) - year
+            } catch (e: Exception) {
+                // Trate a exceção como necessário, por exemplo, retornando uma idade padrão ou logando o erro
+                e.printStackTrace()
+                0 // Idade padrão em caso de erro
+            }
         }
 }
